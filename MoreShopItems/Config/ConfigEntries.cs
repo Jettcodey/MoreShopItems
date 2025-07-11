@@ -12,7 +12,7 @@ namespace MoreShopItems.Config
 {
     public static class ConfigEntries
     {
-        private static string[] DESCRIPTIONS = new string[23]
+        private static string[] DESCRIPTIONS = new string[25]
         {
             "How many of each upgrade to spawn in the shop.",
             "How many upgrades you can purchase total. Set 0 to disable",
@@ -36,7 +36,9 @@ namespace MoreShopItems.Config
             "How many trackers you can purchase total. Set 0 to disable",
             "Overrides the values (MaxAmountInShop, MaxPurchaseAmount) set by other item/upgrade mods.",
             "Overrides the values (MaxAmountInShop, MaxPurchaseAmount) of single-use upgrades.",
-            "Spawns the additional shelving into the shop (set false to disable the shelf spawning)."
+            "Spawns the additional shelving into the shop (set false to disable the shelf spawning).",
+            "How many additional shelving units to spawn in the shop. Set 0 to disable.",
+            "Allows stackable items to be added to the shop",
         };
 
         public static string[] GetConfigDescriptions() => ConfigEntries.DESCRIPTIONS;
@@ -66,4 +68,3 @@ namespace MoreShopItems.Config
         }
     }
 }
-

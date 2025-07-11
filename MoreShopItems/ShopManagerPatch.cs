@@ -127,7 +127,7 @@ internal static class ShopManagerPatch
                     else if (!flag)
                         ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
                 }
-                else if ((!MoreUpgradesMOD.isLoaded() || !obj.itemAssetName.Contains("Modded")) && !(VanillaUpgradesMOD.isLoaded() & flag))
+                else if ((!MoreUpgradesMOD.isLoaded() && !(NikkisUpgradesMOD.isLoaded()) || !obj.itemAssetName.Contains("Modded")) && !(VanillaUpgradesMOD.isLoaded() & flag))
                 {
                     if (boolConfigEntries["Override Single-Use Upgrades"].Value & flag)
                         ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
@@ -157,10 +157,10 @@ internal static class ShopManagerPatch
     [HarmonyPatch("Awake")]
     private static void SetValues(ShopManager __instance)
     {
-        ShopManagerPatch.itemConsumablesAmount_ref(__instance) = 100;
-        ShopManagerPatch.itemUpgradesAmount_ref(__instance) = 50;
+        ShopManagerPatch.itemConsumablesAmount_ref(__instance) = 150;
+        ShopManagerPatch.itemUpgradesAmount_ref(__instance) = 110;
         ShopManagerPatch.itemHealthPacksAmount_ref(__instance) = 50;
-        ShopManagerPatch.itemSpawnTargetAmount_ref(__instance) = 250;
+        ShopManagerPatch.itemSpawnTargetAmount_ref(__instance) = 350;
     }
 
     [HarmonyPrefix]
@@ -169,86 +169,118 @@ internal static class ShopManagerPatch
     {
         if (!(RunManager.instance.levelCurrent.ResourcePath == "Shop") || !Plugin.Instance.boolConfigEntries["Spawn Additional Shelving"].Value)
             return;
-        GameObject gameObject1 = GameObject.Find("Soda Shelf");
-        GameObject gameObject2 = GameObject.Find("Module Switch BOT");
-        if ((Object)gameObject1 == null || gameObject2.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
+
+        int maxShelvesToSpawn = Plugin.Instance.intConfigEntries["Max Additional Shelves In Shop"].Value;
+        if (maxShelvesToSpawn <= 0)
+            return;
+
+        HashSet<string> usedLocations = new HashSet<string>();
+        int shelvesSpawned = 0;
+
+        for (int i = 0; i < maxShelvesToSpawn; i++)
         {
-            GameObject gameObject3 = GameObject.Find("Shop Magazine Stand (1)");
-            GameObject gameObject4 = GameObject.Find("Shop Magazine Stand");
-            GameObject gameObject5 = GameObject.Find("Module Switch (1) top");
-            if ((Object)gameObject3 == null || gameObject5.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
+            bool spawnedThisIteration = false;
+
+            if (!usedLocations.Contains("Soda"))
+            {
+                GameObject gameObject1 = GameObject.Find("Soda Shelf");
+                GameObject gameObject2 = GameObject.Find("Module Switch BOT");
+                if (gameObject1 != null && gameObject2 != null && !gameObject2.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
+                {
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        if (SemiFunc.IsMasterClient())
+                        {
+                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject1.transform.position, gameObject1.transform.rotation);
+                            ShopManagerPatch.SetParent(gameObject2.transform, ShopManagerPatch.shelf);
+                        }
+                        gameObject1.SetActive(false);
+                    }
+                    else
+                    {
+                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject1.transform.position, gameObject1.transform.rotation, gameObject2.transform);
+                        gameObject1.SetActive(false);
+                    }
+                    usedLocations.Add("Soda");
+                    shelvesSpawned++;
+                    spawnedThisIteration = true;
+                }
+            }
+
+            if (spawnedThisIteration) continue;
+
+            if (!usedLocations.Contains("Magazine"))
+            {
+                GameObject gameObject3 = GameObject.Find("Shop Magazine Stand (1)");
+                GameObject gameObject4 = GameObject.Find("Shop Magazine Stand");
+                GameObject gameObject5 = GameObject.Find("Module Switch (1) top");
+                if (gameObject3 != null && gameObject5 != null && !gameObject5.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
+                {
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        if (SemiFunc.IsMasterClient())
+                        {
+                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject3.transform.position, gameObject3.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f));
+                            ShopManagerPatch.SetParent(gameObject5.transform, ShopManagerPatch.shelf);
+                        }
+                        gameObject3.SetActive(false);
+                        if (gameObject4 != null)
+                            gameObject4.SetActive(false);
+                    }
+                    else
+                    {
+                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject3.transform.position, gameObject3.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f), gameObject5.transform.parent);
+                        gameObject3.SetActive(false);
+                        if (gameObject4 != null)
+                            gameObject4.SetActive(false);
+                    }
+                    usedLocations.Add("Magazine");
+                    shelvesSpawned++;
+                    spawnedThisIteration = true;
+                }
+            }
+
+            if (spawnedThisIteration) continue;
+
+            if (!usedLocations.Contains("Candy"))
             {
                 GameObject gameObject6 = GameObject.Find("Module Switch (2) left");
                 GameObject gameObject7 = GameObject.Find("Candy Shelf");
-                if ((Object)gameObject6 == null || gameObject6.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
+                if (gameObject6 != null && gameObject7 != null && !gameObject6.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
                 {
-                    Plugin.Logger.LogInfo((object)"Edge case found. Temporarily preventing spawn of custom shelf.");
-                    return;
-                }
-                if (SemiFunc.IsMultiplayer())
-                {
-                    if (SemiFunc.IsMasterClient())
+                    if (SemiFunc.IsMultiplayer())
                     {
-                        ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject6.transform.position + gameObject6.transform.right * 0.5f - gameObject6.transform.forward * 0.8f, gameObject6.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f));
-                        ShopManagerPatch.SetParent(gameObject6.transform, ShopManagerPatch.shelf);
+                        if (SemiFunc.IsMasterClient())
+                        {
+                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject6.transform.position + gameObject6.transform.right * 0.5f - gameObject6.transform.forward * 0.8f, gameObject6.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f));
+                            ShopManagerPatch.SetParent(gameObject6.transform, ShopManagerPatch.shelf);
+                        }
+                        if (gameObject7 != null)
+                            gameObject7.SetActive(false);
                     }
                     else
                     {
-                        if (!((Object)gameObject7 != null))
-                            return;
-                        gameObject7.SetActive(false);
-                        return;
+                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject6.transform.position + gameObject6.transform.right * 0.5f - gameObject6.transform.forward * 0.8f, gameObject6.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f), gameObject6.transform.parent);
+                        if (gameObject7 != null)
+                            gameObject7.SetActive(false);
                     }
+                    usedLocations.Add("Candy");
+                    shelvesSpawned++;
+                    spawnedThisIteration = true;
                 }
-                else
-                    ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject6.transform.position + gameObject6.transform.right * 0.5f - gameObject6.transform.forward * 0.8f, gameObject6.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f), gameObject5.transform.parent);
-                if ((Object)gameObject7 != null)
-                    gameObject7.SetActive(false);
             }
-            else
+
+            // If no shelf was spawned in this full pass, it means no more locations are available.
+            if (!spawnedThisIteration)
             {
-                if (SemiFunc.IsMultiplayer())
-                {
-                    if (SemiFunc.IsMasterClient())
-                    {
-                        ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject3.transform.position, gameObject3.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f));
-                        ShopManagerPatch.SetParent(gameObject5.transform, ShopManagerPatch.shelf);
-                    }
-                    else
-                    {
-                        gameObject3.SetActive(false);
-                        if (!((Object)gameObject4 != null))
-                            return;
-                        gameObject4.SetActive(false);
-                        return;
-                    }
-                }
-                else
-                    ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject3.transform.position, gameObject3.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f), gameObject5.transform.parent);
-                gameObject3.SetActive(false);
-                if ((Object)gameObject4 != null)
-                    gameObject4.SetActive(false);
+                Plugin.Logger.LogInfo((object)$"No more available locations found. Stopping shelf spawn at {shelvesSpawned} shelves.");
+                break; // Exit the loop
             }
         }
-        else
+
+        if (shelvesSpawned > 0)
         {
-            if (SemiFunc.IsMultiplayer())
-            {
-                if (SemiFunc.IsMasterClient())
-                {
-                    ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject1.transform.position, gameObject1.transform.rotation);
-                    ShopManagerPatch.SetParent(gameObject2.transform, ShopManagerPatch.shelf);
-                }
-                else
-                {
-                    gameObject1.SetActive(false);
-                    return;
-                }
-            }
-            else
-                ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject1.transform.position, gameObject1.transform.rotation, gameObject2.transform);
-            gameObject1.SetActive(false);
+            Plugin.Logger.LogInfo((object)$"Successfully spawned {shelvesSpawned} custom shelf/shelves!");
         }
-        Plugin.Logger.LogInfo((object)"Successfully spawned the shelf!");
     }
 }

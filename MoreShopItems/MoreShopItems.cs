@@ -11,7 +11,7 @@ using MoreShopItems.Config;
 
 namespace MoreShopItems;
 
-[BepInPlugin("Jettcodey.MoreShopItems", "More Shop Items", "2.1.0")]
+[BepInPlugin("Jettcodey.MoreShopItems", "More Shop Items", "2.1.1")]
 [BepInDependency("REPOLib", BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency("bulletbot.moreupgrades", BepInDependency.DependencyFlags.SoftDependency)]
 public class Plugin : BaseUnityPlugin
@@ -37,13 +37,13 @@ public class Plugin : BaseUnityPlugin
         _harmony.PatchAll(typeof(ShopManagerPatch));
         _harmony.PatchAll(typeof(PunManagerPatch));
 
-        Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_NAME} v{MyPluginInfo.PLUGIN_VERSION} is loaded.");
+        Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_NAME} v{MyPluginInfo.PLUGIN_VERSION} loaded successfully.");
     }
 
     private AssetBundle LoadAssetBundle(string filename)
     {
         // loads the asset file from the plugin's directory
-        return AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Instance.Info.Location), filename));
+        return AssetBundle.LoadFromFile(Path.Combine(Path.GetDirectoryName(Instance?.Info.Location), filename));
     }
 
     private GameObject LoadAssetFromBundle(AssetBundle bundle, string name)
@@ -76,10 +76,12 @@ public class Plugin : BaseUnityPlugin
         this.intConfigEntries.Add("Max Crystal Purchase Amount", ConfigHelper.CreateConfig("Utilities", "Max Crystal Purchase Amount", 0, configDescriptions[17], 0, 1000));
         this.intConfigEntries.Add("Max Trackers In Shop", ConfigHelper.CreateConfig("Utilities", "Max Trackers In Shop", 5, configDescriptions[18], -1, 20));
         this.intConfigEntries.Add("Max Tracker Purchase Amount", ConfigHelper.CreateConfig("Utilities", "Max Tracker Purchase Amount", 0, configDescriptions[19], 0, 1000));
+        this.intConfigEntries.Add("Max Additional Shelves In Shop", ConfigHelper.CreateConfig("General", "Max Additional Shelves In Shop", 1, configDescriptions[23], 0, 2));
 
         // Add boolean config entries
         this.boolConfigEntries.Add("Override Modded Items", ConfigHelper.CreateConfig("General", "Override Modded Items", true, configDescriptions[20], -1, -1));
         this.boolConfigEntries.Add("Override Single-Use Upgrades", ConfigHelper.CreateConfig("General", "Override Single-Use Upgrades", false, configDescriptions[21], -1, -1));
         this.boolConfigEntries.Add("Spawn Additional Shelving", ConfigHelper.CreateConfig("General", "Spawn Additional Shelving", true, configDescriptions[22], -1, -1));
+        this.boolConfigEntries.Add("Allow Stackable Items", ConfigHelper.CreateConfig("General", "Allow Stackable Items", true, configDescriptions[24], -1, -1));
     }
 }
