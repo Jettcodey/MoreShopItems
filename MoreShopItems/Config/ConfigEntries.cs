@@ -12,7 +12,7 @@ namespace MoreShopItems.Config
 {
     public static class ConfigEntries
     {
-        private static string[] DESCRIPTIONS = new string[25]
+        private static string[] DESCRIPTIONS = new string[31]
         {
             "How many of each upgrade to spawn in the shop.",
             "How many upgrades you can purchase total. Set 0 to disable",
@@ -38,7 +38,13 @@ namespace MoreShopItems.Config
             "Overrides the values (MaxAmountInShop, MaxPurchaseAmount) of single-use upgrades.",
             "Spawns the additional shelving into the shop (set false to disable the shelf spawning).",
             "How many additional shelving units to spawn in the shop. Set 0 to disable.",
-            "Allows stackable items to be added to the shop",
+            "How many Carts to spawn in the shop.",
+            "How many Carts you can purchase total. Set 0 to disable",
+            "How many Pocket Carts to spawn in the shop.",
+            "How many Pocket Carts you can purchase total. Set 0 to disable",
+            "How many Tools to spawn in the shop.",
+            "How many Tools you can purchase total. Set 0 to disable",
+            "Enable logging of the potential items Spawning in the shop.",
         };
 
         public static string[] GetConfigDescriptions() => ConfigEntries.DESCRIPTIONS;

@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using BepInEx.Configuration;
+using BepInEx.Logging;
 using HarmonyLib;
 using Photon.Pun;
 using UnityEngine;
@@ -112,11 +114,33 @@ internal static class ShopManagerPatch
                         break;
                     }
                     break;
+                case SemiFunc.itemType.cart:
+                    if (intConfigEntries["Max Carts In Shop"].Value != -1)
+                    {
+                        maxInShop = intConfigEntries["Max Carts In Shop"].Value;
+                        maxPurchaseAmount = intConfigEntries["Max Cart Purchase Amount"].Value;
+                    }
+                    break;
+
+                case SemiFunc.itemType.pocket_cart:
+                    if (intConfigEntries["Max Pocket Carts In Shop"].Value != -1)
+                    {
+                        maxInShop = intConfigEntries["Max Pocket Carts In Shop"].Value;
+                        maxPurchaseAmount = intConfigEntries["Max Pocket Cart Purchase Amount"].Value;
+                    }
+                    break;
+                case SemiFunc.itemType.tool:
+                    if (intConfigEntries["Max Tools In Shop"].Value != -1)
+                    {
+                        maxInShop = intConfigEntries["Max Tools In Shop"].Value;
+                        maxPurchaseAmount = intConfigEntries["Max Tool Purchase Amount"].Value;
+                    }
+                    break;
                 default:
                     continue;
             }
             bool flag = obj.itemType == SemiFunc.itemType.item_upgrade;
-            if (obj.itemType != SemiFunc.itemType.cart && obj.itemType != SemiFunc.itemType.pocket_cart && maxInShop != -2)
+            if (maxInShop != -2)
             {
                 if (boolConfigEntries["Override Modded Items"].Value)
                 {
@@ -281,6 +305,72 @@ internal static class ShopManagerPatch
         if (shelvesSpawned > 0)
         {
             Plugin.Logger.LogInfo((object)$"Successfully spawned {shelvesSpawned} custom shelf/shelves!");
+        }
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch("GetAllItemVolumesInScene")]
+    private static void LogPotentialItems(ShopManager __instance)
+    {
+        if (Plugin.Instance.boolConfigEntries["Log Potential Items"].Value)
+        {
+            if (__instance == null) return;
+
+            Plugin.Logger.LogInfo("--- Shop Initialization: Starting Item Scan ---");
+            Task.Delay(2000).Wait(); // Wait for a moment to ensure items are loaded
+
+            LogItemCollection(__instance.potentialItems, "Standard Items");
+            LogItemCollection(__instance.potentialItemUpgrades, "Upgrade Items");
+            LogItemCollection(__instance.potentialItemConsumables, "Consumables");
+            LogItemCollection(__instance.potentialItemHealthPacks, "Health Packs");
+
+            if (__instance.potentialSecretItems.Count > 0)
+            {
+                Plugin.Logger.LogInfo($"Found {__instance.potentialSecretItems.Count} potential Secret Items (grouped):");
+                foreach (var entry in __instance.potentialSecretItems)
+                {
+                    Plugin.Logger.LogInfo($"  Category: {entry.Key}");
+                    LogItemCollection(entry.Value, "", nested: true);
+                }
+            }
+            else
+            {
+                Plugin.Logger.LogInfo("No potential Secret Items found.");
+            }
+
+            Plugin.Logger.LogInfo("--- Shop Initialization: Item Scan Complete ---");
+        }
+    }
+    // make stuff easier to read in the console/logs
+    private static void LogItemCollection(List<Item> items, string collectionName, bool nested = false)
+    {
+        if (items != null && items.Count > 0)
+        {
+            if (!string.IsNullOrEmpty(collectionName))
+            {
+                Plugin.Logger.LogInfo($"Found {items.Count} potential {collectionName}:");
+            }
+
+            int maxNameLength = 0;
+            foreach (Item item in items)
+            {
+                if (item.itemName != null && item.itemName.Length > maxNameLength)
+                {
+                    maxNameLength = item.itemName.Length;
+                }
+            }
+
+            maxNameLength += 3;
+
+            foreach (Item item in items)
+            {
+                string prefix = nested ? "    - " : "  - ";
+                Plugin.Logger.LogInfo($"{prefix}Name: {item.itemName.PadRight(maxNameLength)}Type: {item.itemType}");
+            }
+        }
+        else if (!string.IsNullOrEmpty(collectionName))
+        {
+            Plugin.Logger.LogInfo($"No potential {collectionName} found.");
         }
     }
 }
