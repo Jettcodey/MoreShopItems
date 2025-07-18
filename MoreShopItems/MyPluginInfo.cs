@@ -10,6 +10,6 @@ namespace MoreShopItems
 
         public const string PLUGIN_NAME = "More Shop Items";
 
-        public const string PLUGIN_VERSION = "2.1.1";
+        public const string PLUGIN_VERSION = "2.1.2";
     }
 }
