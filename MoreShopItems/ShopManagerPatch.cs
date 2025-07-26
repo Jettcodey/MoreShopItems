@@ -181,10 +181,10 @@ internal static class ShopManagerPatch
     [HarmonyPatch("Awake")]
     private static void SetValues(ShopManager __instance)
     {
-        ShopManagerPatch.itemConsumablesAmount_ref(__instance) = 150;
-        ShopManagerPatch.itemUpgradesAmount_ref(__instance) = 110;
-        ShopManagerPatch.itemHealthPacksAmount_ref(__instance) = 50;
-        ShopManagerPatch.itemSpawnTargetAmount_ref(__instance) = 350;
+        ShopManagerPatch.itemConsumablesAmount_ref(__instance) = 200;
+        ShopManagerPatch.itemUpgradesAmount_ref(__instance) = 160;
+        ShopManagerPatch.itemHealthPacksAmount_ref(__instance) = 60;
+        ShopManagerPatch.itemSpawnTargetAmount_ref(__instance) = 450;
     }
 
     [HarmonyPrefix]
@@ -207,23 +207,23 @@ internal static class ShopManagerPatch
 
             if (!usedLocations.Contains("Soda"))
             {
-                GameObject gameObject1 = GameObject.Find("Soda Shelf");
-                GameObject gameObject2 = GameObject.Find("Module Switch BOT");
-                if (gameObject1 != null && gameObject2 != null && !gameObject2.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
+                GameObject sodaShelf = GameObject.Find("Soda Shelf");
+                GameObject moduleBottom = GameObject.Find("Module Switch BOT");
+                if (sodaShelf != null && moduleBottom != null && !moduleBottom.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
                 {
                     if (SemiFunc.IsMultiplayer())
                     {
                         if (SemiFunc.IsMasterClient())
                         {
-                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject1.transform.position, gameObject1.transform.rotation);
-                            ShopManagerPatch.SetParent(gameObject2.transform, ShopManagerPatch.shelf);
+                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, sodaShelf.transform.position, sodaShelf.transform.rotation);
+                            ShopManagerPatch.SetParent(moduleBottom.transform, ShopManagerPatch.shelf);
                         }
-                        gameObject1.SetActive(false);
+                        sodaShelf.SetActive(false);
                     }
                     else
                     {
-                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject1.transform.position, gameObject1.transform.rotation, gameObject2.transform);
-                        gameObject1.SetActive(false);
+                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, sodaShelf.transform.position, sodaShelf.transform.rotation, moduleBottom.transform);
+                        sodaShelf.SetActive(false);
                     }
                     usedLocations.Add("Soda");
                     shelvesSpawned++;
@@ -235,28 +235,28 @@ internal static class ShopManagerPatch
 
             if (!usedLocations.Contains("Magazine"))
             {
-                GameObject gameObject3 = GameObject.Find("Shop Magazine Stand (1)");
-                GameObject gameObject4 = GameObject.Find("Shop Magazine Stand");
-                GameObject gameObject5 = GameObject.Find("Module Switch (1) top");
-                if (gameObject3 != null && gameObject5 != null && !gameObject5.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
+                GameObject moduleTop = GameObject.Find("Module Switch (1) top");
+                GameObject magazineStand_1 = GameObject.Find("Shop Magazine Stand (1)");
+                GameObject magazineStand = GameObject.Find("Shop Magazine Stand");
+                if (magazineStand_1 != null && moduleTop != null && !moduleTop.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
                 {
                     if (SemiFunc.IsMultiplayer())
                     {
                         if (SemiFunc.IsMasterClient())
                         {
-                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject3.transform.position, gameObject3.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f));
-                            ShopManagerPatch.SetParent(gameObject5.transform, ShopManagerPatch.shelf);
+                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, magazineStand_1.transform.position, magazineStand_1.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f));
+                            ShopManagerPatch.SetParent(moduleTop.transform, ShopManagerPatch.shelf);
                         }
-                        gameObject3.SetActive(false);
-                        if (gameObject4 != null)
-                            gameObject4.SetActive(false);
+                        magazineStand_1.SetActive(false);
+                        if (magazineStand != null)
+                            magazineStand.SetActive(false);
                     }
                     else
                     {
-                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject3.transform.position, gameObject3.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f), gameObject5.transform.parent);
-                        gameObject3.SetActive(false);
-                        if (gameObject4 != null)
-                            gameObject4.SetActive(false);
+                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, magazineStand_1.transform.position, magazineStand_1.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f), moduleTop.transform.parent);
+                        magazineStand_1.SetActive(false);
+                        if (magazineStand != null)
+                            magazineStand.SetActive(false);
                     }
                     usedLocations.Add("Magazine");
                     shelvesSpawned++;
@@ -268,27 +268,194 @@ internal static class ShopManagerPatch
 
             if (!usedLocations.Contains("Candy"))
             {
-                GameObject gameObject6 = GameObject.Find("Module Switch (2) left");
-                GameObject gameObject7 = GameObject.Find("Candy Shelf");
-                if (gameObject6 != null && gameObject7 != null && !gameObject6.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
+                GameObject moduleLeft = GameObject.Find("Module Switch (2) left");
+                GameObject candyShelf = GameObject.Find("Candy Shelf");
+                if (moduleLeft != null && candyShelf != null && !moduleLeft.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
                 {
                     if (SemiFunc.IsMultiplayer())
                     {
                         if (SemiFunc.IsMasterClient())
                         {
-                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, gameObject6.transform.position + gameObject6.transform.right * 0.5f - gameObject6.transform.forward * 0.8f, gameObject6.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f));
-                            ShopManagerPatch.SetParent(gameObject6.transform, ShopManagerPatch.shelf);
+                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, moduleLeft.transform.position + moduleLeft.transform.right * 0.5f - moduleLeft.transform.forward * 0.8f, moduleLeft.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f));
+                            ShopManagerPatch.SetParent(moduleLeft.transform, ShopManagerPatch.shelf);
                         }
-                        if (gameObject7 != null)
-                            gameObject7.SetActive(false);
+                        if (candyShelf != null)
+                            candyShelf.SetActive(false);
                     }
                     else
                     {
-                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, gameObject6.transform.position + gameObject6.transform.right * 0.5f - gameObject6.transform.forward * 0.8f, gameObject6.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f), gameObject6.transform.parent);
-                        if (gameObject7 != null)
-                            gameObject7.SetActive(false);
+                        ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, moduleLeft.transform.position + moduleLeft.transform.right * 0.5f - moduleLeft.transform.forward * 0.8f, moduleLeft.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f), moduleLeft.transform.parent);
+                        if (candyShelf != null)
+                            candyShelf.SetActive(false);
                     }
                     usedLocations.Add("Candy");
+                    shelvesSpawned++;
+                    spawnedThisIteration = true;
+                }
+            }
+
+            if (spawnedThisIteration) continue;
+
+            if (!usedLocations.Contains("Soda Machine"))
+            {
+                GameObject sodaMachine = GameObject.Find("Soda Machine (1)");
+                GameObject moduleTop = GameObject.Find("Module Switch (1) top");
+                GameObject shopOwner = GameObject.Find("Shop Owner");
+
+                GameObject wallDoor = null;
+                if (moduleTop != null)
+                {
+                    Transform connected = moduleTop.transform.Find("Connected");
+                    if (connected != null)
+                    {
+                        wallDoor = connected.Find("Wall 01 - 1x1 - Door (3)")?.gameObject;
+                    }
+                }
+
+                bool shouldPrevent = (wallDoor != null && !wallDoor.activeSelf) && (shopOwner != null && shopOwner.activeSelf);
+
+                if (sodaMachine != null && moduleTop != null && sodaMachine.activeSelf && !shouldPrevent)
+                {
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        if (SemiFunc.IsMasterClient())
+                        {
+                            Vector3 pos = sodaMachine.transform.position;
+                            Quaternion rot = Quaternion.Euler(0f, 90f, 0f);
+                            GameObject shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, pos, rot);
+                            ShopManagerPatch.SetParent(moduleTop.transform, shelf);
+                        }
+
+                        sodaMachine.SetActive(false);
+                    }
+                    else
+                    {
+                        Vector3 pos = sodaMachine.transform.position;
+                        Quaternion rot = Quaternion.Euler(0f, 90f, 0f);
+                        GameObject shelf = Object.Instantiate(Plugin.CustomItemShelf, pos, rot, moduleTop.transform);
+                        sodaMachine.SetActive(false);
+                    }
+
+                    usedLocations.Add("Soda Machine");
+                    shelvesSpawned++;
+                    spawnedThisIteration = true;
+                }
+                else if (shouldPrevent && sodaMachine != null)
+                {
+                    sodaMachine.SetActive(true);
+                }
+            }
+
+            if (spawnedThisIteration) continue;
+
+            // This one is a bit more complex, but we're now able to always spawn two shelves.
+            if (!usedLocations.Contains("cashiers shelf"))
+            {
+                GameObject moduleRight = GameObject.Find("Module Switch (2) right");
+                GameObject cashierShelf = GameObject.Find("cashiers shelf");
+                GameObject cashierDesk = GameObject.Find("cashiers desk");
+                GameObject magazineHolder = GameObject.Find("Shop Magazine Holder");
+                GameObject shopRegister = GameObject.Find("Shop Cash register");
+                GameObject shopChair = GameObject.Find("Shop Chair");
+                GameObject shopOwner = GameObject.Find("Shop Owner");
+
+                Transform connected = moduleRight?.transform.Find("Connected");
+
+                if (moduleRight != null && connected != null && !connected.gameObject.activeSelf && cashierShelf != null)
+                {
+                    // Determine if position requires special offset
+                    Vector3 modulePos = moduleRight.transform.position;
+                    bool useFirstOffset = Vector3.Distance(modulePos, new Vector3(-7.9544f, 0f, 7.7214f)) < 0.01f;
+                    bool useSecondOffset = Vector3.Distance(modulePos, new Vector3(7.9544f, 0f, 7.2786f)) < 0.01f;
+
+                    // Shelf spawn positions for the right side in diffrent shop Layouts
+                    Vector3 shelfPos = cashierShelf.transform.position;
+                    if (useFirstOffset)
+                    {
+                        shelfPos.x += 0.4f;
+                        shelfPos.z += 1.0f;
+                    }
+                    else if (useSecondOffset)
+                    {
+                        shelfPos.x -= 0.5f;
+                        shelfPos.z -= 0.9f;
+                    }
+                    else
+                    {
+                        shelfPos.x += 1.0f;
+                        shelfPos.z -= 0.4f;
+                    }
+
+                    Quaternion shelfRot = cashierShelf.transform.rotation * Quaternion.Euler(0f, 180f, 0f);
+
+                    // Shelf Spawning
+                    if (SemiFunc.IsMultiplayer())
+                    {
+                        if (SemiFunc.IsMasterClient())
+                        {
+                            ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, shelfPos, shelfRot);
+                            ShopManagerPatch.SetParent(moduleRight.transform, ShopManagerPatch.shelf);
+                        }
+
+                        cashierShelf.SetActive(false);
+                        if (magazineHolder != null) magazineHolder.SetActive(false);
+                        if (shopChair != null) shopChair.SetActive(false);
+                        if (shopOwner != null) shopOwner.SetActive(false);
+                    }
+                    else
+                    {
+                        ShopManagerPatch.shelf = Object.Instantiate(Plugin.CustomItemShelf, shelfPos, shelfRot, moduleRight.transform);
+
+                        cashierShelf.SetActive(false);
+                        if (magazineHolder != null) magazineHolder.SetActive(false);
+                        if (shopChair != null) shopChair.SetActive(false);
+                        if (shopOwner != null) shopOwner.SetActive(false);
+                    }
+
+                    //Desk and Register adjustment
+                    if (cashierDesk != null)
+                    {
+                        Vector3 deskPos = cashierDesk.transform.position;
+                        if (useFirstOffset)
+                        {
+                            deskPos.x += 0.9f;
+                            deskPos.z -= 0.0f;
+                        }
+                        else if (useSecondOffset)
+                        {
+                            deskPos.x -= 0.9f;
+                            deskPos.z -= 0.0f;
+                        }
+                        else
+                        {
+                            deskPos.x += 0.0f;
+                            deskPos.z -= 1.0f;
+                        }
+                        cashierDesk.transform.position = deskPos;
+                    }
+
+                    if (shopRegister != null)
+                    {
+                        Vector3 regPos = shopRegister.transform.position;
+                        if (useFirstOffset)
+                        {
+                            regPos.x += 0.9f;
+                            regPos.z -= 0.0f;
+                        }
+                        else if (useSecondOffset)
+                        {
+                            regPos.x -= 0.9f;
+                            regPos.z -= 0.0f;
+                        }
+                        else
+                        {
+                            regPos.x += 0.0f;
+                            regPos.z -= 1.0f;
+                        }
+                        shopRegister.transform.position = regPos;
+                    }
+
+                    usedLocations.Add("cashiers shelf");
                     shelvesSpawned++;
                     spawnedThisIteration = true;
                 }

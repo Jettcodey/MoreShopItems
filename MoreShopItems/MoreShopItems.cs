@@ -11,7 +11,7 @@ using MoreShopItems.Config;
 
 namespace MoreShopItems;
 
-[BepInPlugin("Jettcodey.MoreShopItems", "More Shop Items", "2.1.2")]
+[BepInPlugin("Jettcodey.MoreShopItems", "More Shop Items", "2.1.3")]
 [BepInDependency("REPOLib", BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency("bulletbot.moreupgrades", BepInDependency.DependencyFlags.SoftDependency)]
 public class Plugin : BaseUnityPlugin
