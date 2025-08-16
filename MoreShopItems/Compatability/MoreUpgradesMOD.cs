@@ -8,10 +8,9 @@ using UnityEngine;
 
 namespace MoreShopItems.Compatability
 {
-    internal static class MoreUpgradesMOD
-    {
-        public static bool isLoaded() =>
-            Chainloader.PluginInfos.ContainsKey("bulletbot.moreupgrades");
-    }
+	internal static class MoreUpgradesMOD
+	{
+		public static bool isLoaded() =>
+			Chainloader.PluginInfos.ContainsKey("bulletbot.moreupgrades");
+	}
 }
-

@@ -8,9 +8,9 @@ using UnityEngine;
 
 namespace MoreShopItems.Compatability
 {
-    internal static class NikkisUpgradesMOD
-    {
-        public static bool isLoaded() =>
-            Chainloader.PluginInfos.ContainsKey("NikkiUpgrades");
-    }
+	internal static class NikkisUpgradesMOD
+	{
+		public static bool isLoaded() =>
+			Chainloader.PluginInfos.ContainsKey("NikkiUpgrades");
+	}
 }
