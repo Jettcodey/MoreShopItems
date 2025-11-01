@@ -42,7 +42,7 @@ namespace MoreShopItems
 			// Harmony patches
 			_harmony.PatchAll(typeof(ShopManagerPatch));
 			_harmony.PatchAll(typeof(PunManagerPatch));
-			Logger.LogInfo($"Plugin More Shop Items v3.0.0 loaded successfully.");
+			Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_NAME} v{MyPluginInfo.PLUGIN_VERSION} loaded successfully.");
 		}
 
 		private AssetBundle LoadAssetBundle(string filename)
