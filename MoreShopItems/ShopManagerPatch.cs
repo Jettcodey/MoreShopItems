@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using BepInEx.Configuration;
+﻿using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using Photon.Pun;
-using UnityEngine;
 using MoreShopItems.Compatability;
+using Photon.Pun;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using UnityEngine;
+using sys = System;
 
 namespace MoreShopItems
 {
@@ -121,7 +122,6 @@ namespace MoreShopItems
 							maxPurchaseAmount = intConfigEntries["Max Cart Purchase Amount"].Value;
 						}
 						break;
-
 					case SemiFunc.itemType.pocket_cart:
 						if (intConfigEntries["Max Pocket Carts In Shop"].Value != -1)
 						{
@@ -151,7 +151,7 @@ namespace MoreShopItems
 						else if (!flag)
 							ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
 					}
-					else if ((!MoreUpgradesMOD.isLoaded() && !(NikkisUpgradesMOD.isLoaded()) || !obj.itemAssetName.Contains("Modded")) && !(VanillaUpgradesMOD.isLoaded() & flag))
+					else if ((!MoreUpgradesMOD.isLoaded() && !(NikkisUpgradesMOD.isLoaded()) || !obj.name.Contains("Modded")) && !(VanillaUpgradesMOD.isLoaded() & flag))
 					{
 						if (boolConfigEntries["Override Single-Use Upgrades"].Value & flag)
 							ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
@@ -181,10 +181,10 @@ namespace MoreShopItems
 		[HarmonyPatch("Awake")]
 		private static void SetValues(ShopManager __instance)
 		{
-			ShopManagerPatch.itemConsumablesAmount_ref(__instance) = 50;
-			ShopManagerPatch.itemUpgradesAmount_ref(__instance) = 180;
-			ShopManagerPatch.itemHealthPacksAmount_ref(__instance) = 60;
-			ShopManagerPatch.itemSpawnTargetAmount_ref(__instance) = 450;
+			itemConsumablesAmount_ref(__instance) = 50;
+			itemUpgradesAmount_ref(__instance) = 180;
+			itemHealthPacksAmount_ref(__instance) = 60;
+			itemSpawnTargetAmount_ref(__instance) = 450;
 		}
 
 		[HarmonyPostfix]
@@ -202,6 +202,8 @@ namespace MoreShopItems
 			if (!(RunManager.instance.levelCurrent.ResourcePath == "Shop") || !Plugin.Instance.boolConfigEntries["Spawn Additional Shelving"].Value)
 				return;
 
+			ShelfEventListener.Ensure();
+
 			int maxShelvesToSpawn = Plugin.Instance.intConfigEntries["Max Additional Shelves In Shop"].Value;
 			if (maxShelvesToSpawn <= 0)
 				return;
@@ -213,26 +215,29 @@ namespace MoreShopItems
 			{
 				bool spawnedThisIteration = false;
 
+				// --- Soda Shelf ---
 				if (!usedLocations.Contains("Soda"))
 				{
 					GameObject sodaShelf = GameObject.Find("Soda Shelf");
 					GameObject moduleBottom = GameObject.Find("Module Switch BOT");
 					if (sodaShelf != null && moduleBottom != null && !moduleBottom.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
 					{
-						if (SemiFunc.IsMultiplayer())
+						Vector3 pos = sodaShelf.transform.position;
+						Quaternion rot = sodaShelf.transform.rotation;
+						Transform parent = moduleBottom.transform;
+						string placeholder = "Soda Shelf";
+
+						if (SemiFunc.IsMultiplayer() && SemiFunc.IsMasterClient())
 						{
-							if (SemiFunc.IsMasterClient())
-							{
-								ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, sodaShelf.transform.position, sodaShelf.transform.rotation);
-								ShopManagerPatch.SetParent(moduleBottom.transform, ShopManagerPatch.shelf);
-							}
-							sodaShelf.SetActive(false);
+							GameObject spawned = ShelfSpawner.Spawn(pos, rot, parent, placeholder);
+							if (spawned != null) SetParent(parent, spawned);
 						}
-						else
+						else if (!SemiFunc.IsMultiplayer())
 						{
-							ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, sodaShelf.transform.position, sodaShelf.transform.rotation, moduleBottom.transform);
-							sodaShelf.SetActive(false);
+							Object.Instantiate(Plugin.CustomItemShelf, pos, rot, parent);
 						}
+
+						sodaShelf.SetActive(false);
 						usedLocations.Add("Soda");
 						shelvesSpawned++;
 						spawnedThisIteration = true;
@@ -241,31 +246,33 @@ namespace MoreShopItems
 
 				if (spawnedThisIteration) continue;
 
+				// --- Magazine Shelf ---
 				if (!usedLocations.Contains("Magazine"))
 				{
 					GameObject moduleTop = GameObject.Find("Module Switch (1) top");
 					GameObject magazineStand_1 = GameObject.Find("Shop Magazine Stand (1)");
 					GameObject magazineStand = GameObject.Find("Shop Magazine Stand");
+
 					if (magazineStand_1 != null && moduleTop != null && !moduleTop.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
 					{
-						if (SemiFunc.IsMultiplayer())
+						Vector3 pos = magazineStand_1.transform.position;
+						Quaternion rot = magazineStand_1.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f);
+						Transform parent = moduleTop.transform.parent;
+						string placeholder = "Shop Magazine Stand (1)";
+
+						if (SemiFunc.IsMultiplayer() && SemiFunc.IsMasterClient())
 						{
-							if (SemiFunc.IsMasterClient())
-							{
-								ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, magazineStand_1.transform.position, magazineStand_1.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f));
-								ShopManagerPatch.SetParent(moduleTop.transform, ShopManagerPatch.shelf);
-							}
-							magazineStand_1.SetActive(false);
-							if (magazineStand != null)
-								magazineStand.SetActive(false);
+							GameObject spawned = ShelfSpawner.Spawn(pos, rot, parent, placeholder);
+							if (spawned != null) SetParent(parent, spawned);
 						}
-						else
+						else if (!SemiFunc.IsMultiplayer())
 						{
-							ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, magazineStand_1.transform.position, magazineStand_1.transform.rotation * Quaternion.Euler(0.0f, 90f, 0.0f), moduleTop.transform.parent);
-							magazineStand_1.SetActive(false);
-							if (magazineStand != null)
-								magazineStand.SetActive(false);
+							Object.Instantiate(Plugin.CustomItemShelf, pos, rot, parent);
 						}
+
+						magazineStand_1.SetActive(false);
+						if (magazineStand != null) magazineStand.SetActive(false);
+
 						usedLocations.Add("Magazine");
 						shelvesSpawned++;
 						spawnedThisIteration = true;
@@ -274,28 +281,30 @@ namespace MoreShopItems
 
 				if (spawnedThisIteration) continue;
 
+				// --- Candy Shelf ---
 				if (!usedLocations.Contains("Candy"))
 				{
 					GameObject moduleLeft = GameObject.Find("Module Switch (2) left");
 					GameObject candyShelf = GameObject.Find("Candy Shelf");
+
 					if (moduleLeft != null && candyShelf != null && !moduleLeft.GetComponent<ModulePropSwitch>().ConnectedParent.activeSelf)
 					{
-						if (SemiFunc.IsMultiplayer())
+						Vector3 pos = moduleLeft.transform.position + moduleLeft.transform.right * 0.5f - moduleLeft.transform.forward * 0.8f;
+						Quaternion rot = moduleLeft.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f);
+						Transform parent = moduleLeft.transform;
+						string placeholder = "Candy Shelf";
+
+						if (SemiFunc.IsMultiplayer() && SemiFunc.IsMasterClient())
 						{
-							if (SemiFunc.IsMasterClient())
-							{
-								ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, moduleLeft.transform.position + moduleLeft.transform.right * 0.5f - moduleLeft.transform.forward * 0.8f, moduleLeft.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f));
-								ShopManagerPatch.SetParent(moduleLeft.transform, ShopManagerPatch.shelf);
-							}
-							if (candyShelf != null)
-								candyShelf.SetActive(false);
+							GameObject spawned = ShelfSpawner.Spawn(pos, rot, parent, placeholder);
+							if (spawned != null) SetParent(parent, spawned);
 						}
-						else
+						else if (!SemiFunc.IsMultiplayer())
 						{
-							ShopManagerPatch.shelf = Object.Instantiate<GameObject>(Plugin.CustomItemShelf, moduleLeft.transform.position + moduleLeft.transform.right * 0.5f - moduleLeft.transform.forward * 0.8f, moduleLeft.transform.rotation * Quaternion.Euler(0.0f, 180f, 0.0f), moduleLeft.transform.parent);
-							if (candyShelf != null)
-								candyShelf.SetActive(false);
+							Object.Instantiate(Plugin.CustomItemShelf, pos, rot, parent);
 						}
+
+						candyShelf.SetActive(false);
 						usedLocations.Add("Candy");
 						shelvesSpawned++;
 						spawnedThisIteration = true;
@@ -304,6 +313,7 @@ namespace MoreShopItems
 
 				if (spawnedThisIteration) continue;
 
+				// --- Soda Machine Shelf ---
 				if (!usedLocations.Contains("Soda Machine"))
 				{
 					GameObject sodaMachine = GameObject.Find("Soda Machine (1)");
@@ -324,26 +334,22 @@ namespace MoreShopItems
 
 					if (sodaMachine != null && moduleTop != null && sodaMachine.activeSelf && !shouldPrevent)
 					{
-						if (SemiFunc.IsMultiplayer())
-						{
-							if (SemiFunc.IsMasterClient())
-							{
-								Vector3 pos = sodaMachine.transform.position;
-								Quaternion rot = Quaternion.Euler(0f, 90f, 0f);
-								GameObject shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, pos, rot);
-								ShopManagerPatch.SetParent(moduleTop.transform, shelf);
-							}
+						Vector3 pos = sodaMachine.transform.position;
+						Quaternion rot = Quaternion.Euler(0f, 90f, 0f);
+						Transform parent = moduleTop.transform;
+						string placeholder = "Soda Machine (1)";
 
-							sodaMachine.SetActive(false);
-						}
-						else
+						if (SemiFunc.IsMultiplayer() && SemiFunc.IsMasterClient())
 						{
-							Vector3 pos = sodaMachine.transform.position;
-							Quaternion rot = Quaternion.Euler(0f, 90f, 0f);
-							GameObject shelf = Object.Instantiate(Plugin.CustomItemShelf, pos, rot, moduleTop.transform);
-							sodaMachine.SetActive(false);
+							GameObject spawned = ShelfSpawner.Spawn(pos, rot, parent, placeholder);
+							if (spawned != null) SetParent(parent, spawned);
+						}
+						else if (!SemiFunc.IsMultiplayer())
+						{
+							Object.Instantiate(Plugin.CustomItemShelf, pos, rot, parent);
 						}
 
+						sodaMachine.SetActive(false);
 						usedLocations.Add("Soda Machine");
 						shelvesSpawned++;
 						spawnedThisIteration = true;
@@ -356,7 +362,7 @@ namespace MoreShopItems
 
 				if (spawnedThisIteration) continue;
 
-				// This one is a bit more complex, but we're now able to always spawn two shelves.
+				// --- Cashier Shelf ---
 				if (!usedLocations.Contains("cashiers shelf"))
 				{
 					GameObject moduleRight = GameObject.Find("Module Switch (2) right");
@@ -371,12 +377,10 @@ namespace MoreShopItems
 
 					if (moduleRight != null && connected != null && !connected.gameObject.activeSelf && cashierShelf != null)
 					{
-						// Determine if position requires special offset
 						Vector3 modulePos = moduleRight.transform.position;
 						bool useFirstOffset = Vector3.Distance(modulePos, new Vector3(-7.9544f, 0f, 7.7214f)) < 0.01f;
 						bool useSecondOffset = Vector3.Distance(modulePos, new Vector3(7.9544f, 0f, 7.2786f)) < 0.01f;
 
-						// Shelf spawn positions for the right side in diffrent shop Layouts
 						Vector3 shelfPos = cashierShelf.transform.position;
 						if (useFirstOffset)
 						{
@@ -395,71 +399,39 @@ namespace MoreShopItems
 						}
 
 						Quaternion shelfRot = cashierShelf.transform.rotation * Quaternion.Euler(0f, 180f, 0f);
+						Transform parent = moduleRight.transform;
+						string placeholder = "cashiers shelf";
 
-						// Shelf Spawning
-						if (SemiFunc.IsMultiplayer())
+						if (SemiFunc.IsMultiplayer() && SemiFunc.IsMasterClient())
 						{
-							if (SemiFunc.IsMasterClient())
-							{
-								ShopManagerPatch.shelf = PhotonNetwork.Instantiate(Plugin.CustomItemShelf.name, shelfPos, shelfRot);
-								ShopManagerPatch.SetParent(moduleRight.transform, ShopManagerPatch.shelf);
-							}
-
-							cashierShelf.SetActive(false);
-							if (magazineHolder != null) magazineHolder.SetActive(false);
-							if (shopChair != null) shopChair.SetActive(false);
-							if (shopOwner != null) shopOwner.SetActive(false);
+							GameObject spawned = ShelfSpawner.Spawn(shelfPos, shelfRot, parent, placeholder);
+							if (spawned != null) SetParent(parent, spawned);
 						}
-						else
+						else if (!SemiFunc.IsMultiplayer())
 						{
-							ShopManagerPatch.shelf = Object.Instantiate(Plugin.CustomItemShelf, shelfPos, shelfRot, moduleRight.transform);
-
-							cashierShelf.SetActive(false);
-							if (magazineHolder != null) magazineHolder.SetActive(false);
-							if (shopChair != null) shopChair.SetActive(false);
-							if (shopOwner != null) shopOwner.SetActive(false);
+							Object.Instantiate(Plugin.CustomItemShelf, shelfPos, shelfRot, parent);
 						}
 
-						//Desk and Register adjustment
+						cashierShelf.SetActive(false);
+						if (magazineHolder != null) magazineHolder.SetActive(false);
+						if (shopChair != null) shopChair.SetActive(false);
+						if (shopOwner != null) shopOwner.SetActive(false);
+
 						if (cashierDesk != null)
 						{
 							Vector3 deskPos = cashierDesk.transform.position;
-							if (useFirstOffset)
-							{
-								deskPos.x += 0.9f;
-								deskPos.z -= 0.0f;
-							}
-							else if (useSecondOffset)
-							{
-								deskPos.x -= 0.9f;
-								deskPos.z -= 0.0f;
-							}
-							else
-							{
-								deskPos.x += 0.0f;
-								deskPos.z -= 1.0f;
-							}
+							if (useFirstOffset) deskPos.x += 0.9f;
+							else if (useSecondOffset) deskPos.x -= 0.9f;
+							else deskPos.z -= 1.0f;
 							cashierDesk.transform.position = deskPos;
 						}
 
 						if (shopRegister != null)
 						{
 							Vector3 regPos = shopRegister.transform.position;
-							if (useFirstOffset)
-							{
-								regPos.x += 0.9f;
-								regPos.z -= 0.0f;
-							}
-							else if (useSecondOffset)
-							{
-								regPos.x -= 0.9f;
-								regPos.z -= 0.0f;
-							}
-							else
-							{
-								regPos.x += 0.0f;
-								regPos.z -= 1.0f;
-							}
+							if (useFirstOffset) regPos.x += 0.9f;
+							else if (useSecondOffset) regPos.x -= 0.9f;
+							else regPos.z -= 1.0f;
 							shopRegister.transform.position = regPos;
 						}
 
@@ -469,17 +441,16 @@ namespace MoreShopItems
 					}
 				}
 
-				// If no shelf was spawned in this full pass, it means no more locations are available.
 				if (!spawnedThisIteration)
 				{
-					Plugin.Logger.LogInfo((object)$"No more available locations found. Stopping shelf spawn at {shelvesSpawned} shelves.");
-					break; // Exit the loop
+					Plugin.Logger.LogInfo($"No more available locations found. Stopping shelf spawn at {shelvesSpawned} shelves.");
+					break;
 				}
 			}
 
 			if (shelvesSpawned > 0)
 			{
-				Plugin.Logger.LogInfo((object)$"Successfully spawned {shelvesSpawned} custom shelf/shelves!");
+				Plugin.Logger.LogInfo($"Successfully spawned {shelvesSpawned} custom shelf/shelves!");
 			}
 		}
 
@@ -492,7 +463,7 @@ namespace MoreShopItems
 				if (__instance == null) return;
 
 				Plugin.Logger.LogInfo("--- Shop Initialization: Starting Item Scan ---");
-				Task.Delay(2000).Wait(); // Wait for a moment to ensure items are loaded
+				Task.Delay(2000).Wait(); // Wait for a moment to ensure items are loaded !IMPORTANT!
 
 				LogItemCollection(__instance.potentialItems, "Standard Items");
 				LogItemCollection(__instance.potentialItemUpgrades, "Upgrade Items");
@@ -516,7 +487,7 @@ namespace MoreShopItems
 				Plugin.Logger.LogInfo("--- Shop Initialization: Item Scan Complete ---");
 			}
 		}
-		// make stuff easier to read in the console/logs
+
 		private static void LogItemCollection(List<Item> items, string collectionName, bool nested = false)
 		{
 			if (items != null && items.Count > 0)
@@ -530,9 +501,7 @@ namespace MoreShopItems
 				foreach (Item item in items)
 				{
 					if (item.itemName != null && item.itemName.Length > maxNameLength)
-					{
 						maxNameLength = item.itemName.Length;
-					}
 				}
 
 				maxNameLength += 3;
@@ -546,6 +515,71 @@ namespace MoreShopItems
 			else if (!string.IsNullOrEmpty(collectionName))
 			{
 				Plugin.Logger.LogInfo($"No potential {collectionName} found.");
+			}
+		}
+
+		internal static class ShelfSpawner
+		{
+			public static GameObject? Spawn(Vector3 pos, Quaternion rot, Transform parentTransform, string placeholderName)
+			{
+				try
+				{
+					if (!SemiFunc.IsMultiplayer())
+					{
+						if (Plugin.CustomItemShelf == null)
+						{
+							Plugin.Logger.LogError("[MoreShopItems] CustomItemShelf is null. Cannot spawn shelf.");
+							return null;
+						}
+
+						if (parentTransform != null)
+							return Object.Instantiate(Plugin.CustomItemShelf, pos, rot, parentTransform);
+						return Object.Instantiate(Plugin.CustomItemShelf, pos, rot);
+					}
+
+					if (SemiFunc.IsMasterClient())
+					{
+						if (Plugin.CustomItemShelf == null)
+						{
+							Plugin.Logger.LogError("[MoreShopItems] CustomItemShelf is null on host. Cannot spawn shelf.");
+							return null;
+						}
+
+						string id = sys.Guid.NewGuid().ToString("N");
+						GameObject local = Object.Instantiate(Plugin.CustomItemShelf, pos, rot);
+						local.name = "MoreShopShelf_" + id;
+
+						if (parentTransform != null)
+							local.transform.SetParent(parentTransform, worldPositionStays: true);
+
+						if (!string.IsNullOrEmpty(placeholderName))
+						{
+							GameObject placeholder = GameObject.Find(placeholderName);
+							if (placeholder != null)
+								placeholder.SetActive(false);
+						}
+
+						string parentName = parentTransform != null ? parentTransform.gameObject.name : string.Empty;
+
+						try
+						{
+							ShelfEvents.RaiseSpawnShelf(id, pos, rot, parentName, placeholderName ?? string.Empty);
+						}
+						catch (sys.Exception ex)
+						{
+							Plugin.Logger.LogError("ShelfSpawner: RaiseSpawnShelf failed: " + ex);
+						}
+
+						return local;
+					}
+
+					return null;
+				}
+				catch (sys.Exception ex)
+				{
+					Plugin.Logger.LogError("ShelfSpawner.Spawn exception: " + ex);
+					return null;
+				}
 			}
 		}
 	}
