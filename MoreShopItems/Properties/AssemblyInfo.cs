@@ -12,11 +12,9 @@ using System.Security.Permissions;
 [assembly: AssemblyProduct("MoreShopItems")]
 [assembly: AssemblyCopyright("")]
 
-[assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
-
 [assembly: ComVisible(false)]
 
 [assembly: Guid("b52829e7-88b6-4158-ba1b-23566c7cf06b")]
 
-[assembly: AssemblyVersion("3.0.2")]
-[assembly: AssemblyFileVersion("3.0.2")]
+[assembly: AssemblyVersion("3.1.0")]
+[assembly: AssemblyFileVersion("3.1.0")]

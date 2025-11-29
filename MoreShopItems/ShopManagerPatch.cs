@@ -20,6 +20,109 @@ namespace MoreShopItems
 		private static GameObject? shelf;
 		internal static bool isMoreUpgrades = false;
 
+		// Price fix patches for 6+ players
+		// UpgradeValueGet patch
+		[HarmonyPatch(typeof(ShopManager), "UpgradeValueGet")]
+		public static class ShopManager_UpgradeValueGet_Patch
+		{
+			[HarmonyPrefix]
+			public static bool Prefix(ref float __result, float _value, Item item)
+			{
+				var instance = ShopManager.instance;
+				if (instance == null)
+					return true; // fallback to original
+
+				int playerCount = Mathf.Max(1, GameDirector.instance.PlayerList.Count);
+				float playerReductionFactor = 0.1f * (playerCount - 1);
+				float cappedReduction = Mathf.Min(0.5f, playerReductionFactor);
+
+				float v = _value;
+				v -= v * cappedReduction;
+
+				if (item != null)
+					v += v * instance.upgradeValueIncrease * (float)StatsManager.instance.GetItemsUpgradesPurchased(item.name);
+
+				v = Mathf.Ceil(v);
+				__result = v;
+				return false;
+			}
+		}
+
+		// HealthPackValueGet patch
+		[HarmonyPatch(typeof(ShopManager), "HealthPackValueGet")]
+		public static class ShopManager_HealthPackValueGet_Patch
+		{
+			[HarmonyPrefix]
+			public static bool Prefix(ref float __result, float _value)
+			{
+				var instance = ShopManager.instance;
+				if (instance == null)
+					return true;
+
+				int playerCount = Mathf.Max(1, GameDirector.instance.PlayerList.Count);
+				float playerReductionFactor = 0.1f * (playerCount - 1);
+				float cappedReduction = Mathf.Min(0.5f, playerReductionFactor);
+
+				float v = _value;
+				int levelsCompleted = Mathf.Min(RunManager.instance.levelsCompleted, 15);
+
+				v -= v * cappedReduction;
+				v += v * instance.healthPackValueIncrease * (float)levelsCompleted;
+
+				v = Mathf.Ceil(v);
+				__result = v;
+				return false;
+			}
+		}
+
+		// ItemAttributes.GetValue patch
+		[HarmonyPatch(typeof(ItemAttributes), "GetValue")]
+		public static class ItemAttributes_GetValue_Patch
+		{
+			[HarmonyPrefix]
+			public static bool Prefix(ItemAttributes __instance)
+			{
+				if (GameManager.Multiplayer() && !PhotonNetwork.IsMasterClient)
+					return true; // let original run on non-master clients
+
+				// get private fields via reflection
+				var t = typeof(ItemAttributes);
+				var fMin = AccessTools.Field(t, "itemValueMin");
+				var fMax = AccessTools.Field(t, "itemValueMax");
+				if (fMin == null || fMax == null)
+					return true; // fallback
+
+				float itemValueMin = (float)fMin.GetValue(__instance);
+				float itemValueMax = (float)fMax.GetValue(__instance);
+
+				float baseValue = UnityEngine.Random.Range(itemValueMin, itemValueMax) * ShopManager.instance.itemValueMultiplier;
+				if (baseValue < 1000f) baseValue = 1000f;
+
+				float finalValue = Mathf.Ceil(baseValue / 1000f);
+
+				if (__instance.itemType == SemiFunc.itemType.item_upgrade)
+					finalValue = ShopManager.instance.UpgradeValueGet(finalValue, __instance.item);
+				else if (__instance.itemType == SemiFunc.itemType.healthPack)
+					finalValue = ShopManager.instance.HealthPackValueGet(finalValue);
+				else if (__instance.itemType == SemiFunc.itemType.power_crystal)
+					finalValue = ShopManager.instance.CrystalValueGet(finalValue);
+
+				int intFinal = (int)finalValue;
+
+				// set internal 'value' field via reflection (field name is "value")
+				var fValue = AccessTools.Field(t, "value");
+				if (fValue != null)
+					fValue.SetValue(__instance, intFinal);
+				else
+					__instance.value = intFinal; // try direct set if accessible
+
+				if (GameManager.Multiplayer())
+					__instance.photonView.RPC("GetValueRPC", RpcTarget.Others, (object)intFinal);
+
+				return false;
+			}
+		}
+
 		[HarmonyPrefix]
 		[HarmonyPatch("ShopInitialize")]
 		private static void AdjustItems()
