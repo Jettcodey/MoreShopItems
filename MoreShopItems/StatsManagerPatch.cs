@@ -7,8 +7,9 @@ namespace MoreShopItems
 {
 	internal class StatsManagerPatch
 	{
-		// Track pending purchases to know their price for refunds
-		private static Dictionary<string, int> pendingPurchases = new Dictionary<string, int>();
+		// Track each item instance
+		private static Dictionary<int, int> instancePrices = new Dictionary<int, int>();
+		private static Dictionary<string, List<int>> itemInstanceIds = new Dictionary<string, List<int>>();
 
 		[HarmonyPrefix]
 		[HarmonyPatch(typeof(StatsManager), "ItemPurchase")]
@@ -33,16 +34,32 @@ namespace MoreShopItems
 						// Block original purchase
 						__runOriginal = false;
 
-						// Get the price of pending purchases
+						// Get the price for this specific instance
 						int refundAmount = 0;
-						if (pendingPurchases.TryGetValue(itemName, out refundAmount))
+
+						// Use the first tracked instance of this item
+						if (itemInstanceIds.ContainsKey(itemName) && itemInstanceIds[itemName].Count > 0)
 						{
-							pendingPurchases.Remove(itemName);
+							int instanceId = itemInstanceIds[itemName][0];
+							if (instancePrices.ContainsKey(instanceId))
+							{
+								refundAmount = instancePrices[instanceId];
+
+								// Clean up THIS instance only
+								instancePrices.Remove(instanceId);
+								itemInstanceIds[itemName].RemoveAt(0);
+
+								if (itemInstanceIds[itemName].Count == 0)
+									itemInstanceIds.Remove(itemName);
+
+								Plugin.Logger.LogInfo($"Refunding {itemName} instance {instanceId} with price: {refundAmount}");
+							}
 						}
-						else
+
+						if (refundAmount == 0)
 						{
-							// Fallback
-							refundAmount = CalculateEstimatedPrice(item);
+							Plugin.Logger.LogError($"NO PRICE FOUND for {itemName}! Tracking failed.");
+							return false;
 						}
 
 						// Refund
@@ -74,7 +91,7 @@ namespace MoreShopItems
 			return true;
 		}
 
-		// Patch shop logic to capture item prices
+		// Track item and use the actual ItemAttributes instance Price
 		[HarmonyPostfix]
 		[HarmonyPatch(typeof(ShopManager), "ShoppingListItemAdd")]
 		private static void Postfix_ShoppingListItemAdd(ItemAttributes item)
@@ -83,18 +100,28 @@ namespace MoreShopItems
 			{
 				if (item != null && item.item != null)
 				{
-					// Store the price of the item
-					pendingPurchases[item.item.name] = item.value;
-					Plugin.Logger.LogInfo($"Tracked purchase: {item.item.name} for {item.value}");
+					string itemName = item.item.name;
+					int instanceId = item.GetInstanceID();
+
+					// Track Instance ID
+					instancePrices[instanceId] = item.value;
+
+					// Map item name to instance ID
+					if (!itemInstanceIds.ContainsKey(itemName))
+						itemInstanceIds[itemName] = new List<int>();
+
+					itemInstanceIds[itemName].Add(instanceId);
+
+					Plugin.Logger.LogInfo($"Added to cart: {itemName} instance {instanceId} for {item.value} (total instances: {itemInstanceIds[itemName].Count})");
 				}
 			}
 			catch (Exception ex)
 			{
-				Plugin.Logger.LogError($"Error tracking purchase: {ex}");
+				Plugin.Logger.LogError($"Error tracking cart addition: {ex}");
 			}
 		}
 
-		// Clean up when removed (not being purchased)
+		// Remove when item removed
 		[HarmonyPostfix]
 		[HarmonyPatch(typeof(ShopManager), "ShoppingListItemRemove")]
 		private static void Postfix_ShoppingListItemRemove(ItemAttributes item)
@@ -103,24 +130,60 @@ namespace MoreShopItems
 			{
 				if (item != null && item.item != null)
 				{
-					pendingPurchases.Remove(item.item.name);
-					Plugin.Logger.LogInfo($"Removed tracked purchase: {item.item.name} (not being purchased)");
+					string itemName = item.item.name;
+					int instanceId = item.GetInstanceID();
+
+					// Remove from instance tracking
+					if (instancePrices.ContainsKey(instanceId))
+					{
+						instancePrices.Remove(instanceId);
+						Plugin.Logger.LogInfo($"Removed instance {instanceId} from price tracking");
+					}
+
+					// Remove from item mapping
+					if (itemInstanceIds.ContainsKey(itemName))
+					{
+						itemInstanceIds[itemName].Remove(instanceId);
+						if (itemInstanceIds[itemName].Count == 0)
+							itemInstanceIds.Remove(itemName);
+
+						Plugin.Logger.LogInfo($"Removed from cart: {itemName} instance {instanceId}");
+					}
 				}
 			}
 			catch (Exception ex)
 			{
-				Plugin.Logger.LogError($"Error removing tracked purchase: {ex}");
+				Plugin.Logger.LogError($"Error removing from cart: {ex}");
 			}
 		}
 
-		// Clean up after purchase
+		// Clean up when purchase successful (ONLY runs if purchase allowed)
 		[HarmonyPostfix]
 		[HarmonyPatch(typeof(StatsManager), "ItemPurchase")]
-		private static void Postfix_ItemPurchase(string itemName)
+		private static void Postfix_ItemPurchase(string itemName, ref bool __runOriginal)
 		{
 			try
 			{
-				pendingPurchases.Remove(itemName);
+				if (!__runOriginal)
+					return;
+
+				// Remove one instance when purchased
+				if (itemInstanceIds.ContainsKey(itemName) && itemInstanceIds[itemName].Count > 0)
+				{
+					int instanceId = itemInstanceIds[itemName][0];
+
+					if (instancePrices.ContainsKey(instanceId))
+					{
+						int price = instancePrices[instanceId];
+						instancePrices.Remove(instanceId);
+						Plugin.Logger.LogInfo($"Successful purchase: {itemName} instance {instanceId} for {price}.");
+					}
+
+					itemInstanceIds[itemName].RemoveAt(0);
+
+					if (itemInstanceIds[itemName].Count == 0)
+						itemInstanceIds.Remove(itemName);
+				}
 
 				if (StatsManager.instance.itemDictionary.ContainsKey(itemName))
 				{
@@ -130,30 +193,6 @@ namespace MoreShopItems
 				}
 			}
 			catch { }
-		}
-
-		private static int CalculateEstimatedPrice(Item item)
-		{
-			try
-			{
-				// Find an existing instance of this item in the shop
-				ItemAttributes[] allItems = GameObject.FindObjectsOfType<ItemAttributes>();
-				foreach (var itemAttr in allItems)
-				{
-					if (itemAttr.item != null && itemAttr.item.name == item.name)
-					{
-						return itemAttr.value;
-					}
-				}
-
-				// If no instance found wee calculate based on more general item value
-				int baseValue = (int)((item.value.valueMin + item.value.valueMax) / 2000f * ShopManager.instance.itemValueMultiplier);
-				return Mathf.Max(1, baseValue);
-			}
-			catch
-			{
-				return 100;
-			}
 		}
 	}
 }

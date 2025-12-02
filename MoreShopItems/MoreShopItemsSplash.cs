@@ -307,7 +307,7 @@ namespace MoreShopItems
 			rt.sizeDelta = new Vector2(200f, 56f);
 
 			// Button label
-			var label = CreateText("Label", 24, FontStyle.Normal, go.transform);
+			var label = CreateText("Label", 28, FontStyle.Normal, go.transform);
 			var labelRt = label.GetComponent<RectTransform>();
 			labelRt.anchorMin = new Vector2(0f, 0f);
 			labelRt.anchorMax = new Vector2(1f, 1f);
