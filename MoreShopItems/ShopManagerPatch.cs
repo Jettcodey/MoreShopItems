@@ -43,7 +43,7 @@ namespace MoreShopItems
 					v += v * instance.upgradeValueIncrease * (float)StatsManager.instance.GetItemsUpgradesPurchased(item.name);
 
 				v = Mathf.Ceil(v);
-				__result = v;
+				__result = Mathf.Max(v, 1f);
 				return false;
 			}
 		}
@@ -70,7 +70,7 @@ namespace MoreShopItems
 				v += v * instance.healthPackValueIncrease * (float)levelsCompleted;
 
 				v = Mathf.Ceil(v);
-				__result = v;
+				__result = Mathf.Max(v, 1f);
 				return false;
 			}
 		}
@@ -107,6 +107,8 @@ namespace MoreShopItems
 				else if (__instance.itemType == SemiFunc.itemType.power_crystal)
 					finalValue = ShopManager.instance.CrystalValueGet(finalValue);
 
+				finalValue = Mathf.Max(finalValue, 1f);
+
 				int intFinal = (int)finalValue;
 
 				// set internal 'value' field via reflection (field name is "value")
@@ -123,155 +125,165 @@ namespace MoreShopItems
 			}
 		}
 
+		private static void SetItemValues(Item item, int maxInShop, int maxPurchaseAmount)
+		{
+			item.maxAmountInShop = maxInShop;
+			item.maxAmount = maxInShop;
+
+			item.maxPurchase = maxPurchaseAmount > 0;
+			item.maxPurchaseAmount = maxPurchaseAmount;
+
+			if (Plugin.Instance.boolConfigEntries["Item Spawn Logs"].Value)
+			{
+				Plugin.Logger.LogInfo($"Set values for {item.name}: maxInShop={maxInShop}, maxPurchase={item.maxPurchase}, maxPurchaseAmount={maxPurchaseAmount}");
+			}
+		}
+
 		[HarmonyPrefix]
 		[HarmonyPatch("ShopInitialize")]
 		private static void AdjustItems()
 		{
-			if (!(RunManager.instance.levelCurrent.ResourcePath == "Shop") || !((Object)StatsManager.instance != null) || !SemiFunc.IsMasterClient() && SemiFunc.IsMultiplayer())
+			if (!(RunManager.instance.levelCurrent.ResourcePath == "Shop") || !(StatsManager.instance != null) || !SemiFunc.IsMasterClient() && SemiFunc.IsMultiplayer())
 				return;
+
 			Dictionary<string, ConfigEntry<int>> intConfigEntries = Plugin.Instance.intConfigEntries;
 			Dictionary<string, ConfigEntry<bool>> boolConfigEntries = Plugin.Instance.boolConfigEntries;
-			Plugin.Logger.LogInfo((object)("Override modded items = " + boolConfigEntries["Override Modded Items"].Value.ToString()));
+
+			Plugin.Logger.LogInfo("Override modded items = " + boolConfigEntries["Override Modded Items"].Value.ToString());
+
 			foreach (Item obj in StatsManager.instance.itemDictionary.Values)
 			{
-				int maxInShop = -2;
-				int maxPurchaseAmount = -2;
+				/*// Skip if we're using vanilla spawn amounts
+				if (boolConfigEntries["Use Game Default Spawn Amounts"].Value)
+				{
+					continue;
+				}*/
+
+				int maxInShop = -1;
+				int maxPurchaseAmount = 0;
+				bool shouldOverride = false;
+
 				switch (obj.itemType)
 				{
 					case SemiFunc.itemType.drone:
-						if (intConfigEntries["Max Drones In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Drones In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Drone Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Drones In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Drone Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.orb:
-						if (intConfigEntries["Max Orbs In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Orbs In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Orb Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Orbs In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Orb Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.item_upgrade:
-						if (intConfigEntries["Max Upgrades In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Upgrades In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Upgrade Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Upgrades In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Upgrade Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.power_crystal:
-						if (intConfigEntries["Max Crystals In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Crystals In Shop"].Value + 1;
-							maxPurchaseAmount = intConfigEntries["Max Crystal Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Crystals In Shop"].Value + 1;
+						maxPurchaseAmount = intConfigEntries["Max Crystal Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.grenade:
-						if (intConfigEntries["Max Grenades In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Grenades In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Grenade Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Grenades In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Grenade Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.melee:
-						if (intConfigEntries["Max Melee Weapons In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Melee Weapons In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Melee Weapon Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Melee Weapons In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Melee Weapon Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.healthPack:
-						if (intConfigEntries["Max Health-Packs In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Health-Packs In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Health-Pack Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Health-Packs In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Health-Pack Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.gun:
-						if (intConfigEntries["Max Guns In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Guns In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Gun Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Guns In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Gun Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.tracker:
-						if (intConfigEntries["Max Trackers In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Trackers In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Tracker Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Trackers In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Tracker Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.mine:
-						if (intConfigEntries["Max Mines In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Mines In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Mine Purchase Amount"].Value;
-							break;
-						}
+						maxInShop = intConfigEntries["Max Mines In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Mine Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.cart:
-						if (intConfigEntries["Max Carts In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Carts In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Cart Purchase Amount"].Value;
-						}
+						maxInShop = intConfigEntries["Max Carts In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Cart Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.pocket_cart:
-						if (intConfigEntries["Max Pocket Carts In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Pocket Carts In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Pocket Cart Purchase Amount"].Value;
-						}
+						maxInShop = intConfigEntries["Max Pocket Carts In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Pocket Cart Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					case SemiFunc.itemType.tool:
-						if (intConfigEntries["Max Tools In Shop"].Value != -1)
-						{
-							maxInShop = intConfigEntries["Max Tools In Shop"].Value;
-							maxPurchaseAmount = intConfigEntries["Max Tool Purchase Amount"].Value;
-						}
+						maxInShop = intConfigEntries["Max Tools In Shop"].Value;
+						maxPurchaseAmount = intConfigEntries["Max Tool Purchase Amount"].Value;
+						shouldOverride = maxInShop != -1;
 						break;
 					default:
 						continue;
 				}
-				bool flag = obj.itemType == SemiFunc.itemType.item_upgrade;
-				if (maxInShop != -2)
+
+				if (shouldOverride)
 				{
+					bool isUpgrade = obj.itemType == SemiFunc.itemType.item_upgrade;
+
 					if (boolConfigEntries["Override Modded Items"].Value)
 					{
-						if (boolConfigEntries["Override Single-Use Upgrades"].Value & flag)
+						if (isUpgrade && boolConfigEntries["Override Single-Use Upgrades"].Value)
+						{
 							ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
-						else if (!obj.maxPurchase)
+						}
+						else if (isUpgrade && !obj.maxPurchase)
+						{
 							ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
-						else if (!flag)
+						}
+						else if (!isUpgrade)
+						{
 							ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
+						}
 					}
-					else if ((!MoreUpgradesMOD.isLoaded() && !(NikkisUpgradesMOD.isLoaded()) || !obj.name.Contains("Modded")) && !(VanillaUpgradesMOD.isLoaded() & flag))
+					else
 					{
-						if (boolConfigEntries["Override Single-Use Upgrades"].Value & flag)
-							ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
-						else if (flag && !obj.maxPurchase)
-							ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
-						else if (!flag)
-							ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
+						// Only override non-modded items
+						bool isModdedItem = (MoreUpgradesMOD.isLoaded() || NikkisUpgradesMOD.isLoaded()) && obj.name.Contains("Modded");
+
+						if (!isModdedItem && !(VanillaUpgradesMOD.isLoaded() && isUpgrade))
+						{
+							if (isUpgrade && boolConfigEntries["Override Single-Use Upgrades"].Value)
+							{
+								ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
+							}
+							else if (isUpgrade && !obj.maxPurchase)
+							{
+								ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
+							}
+							else if (!isUpgrade)
+							{
+								ShopManagerPatch.SetItemValues(obj, maxInShop, maxPurchaseAmount);
+							}
+						}
 					}
 				}
 			}
 		}
 
-		private static void SetItemValues(Item item, int maxInShop, int maxPurchaseAmount)
+		[HarmonyPrefix]
+		[HarmonyPatch(typeof(ShopManager), "GetAllItemsFromStatsManager")]
+		private static void Prefix_GetAllItemsFromStatsManager()
 		{
-			item.maxAmountInShop = item.maxAmount = maxInShop;
-			item.maxPurchase = maxPurchaseAmount > 0;
-			item.maxPurchaseAmount = maxPurchaseAmount;
+			// Run AdjustItems again to ensure all item values are set before the shop populates
+			AdjustItems();
 		}
 
 		[PunRPC]
@@ -284,7 +296,7 @@ namespace MoreShopItems
 		[HarmonyPatch("Awake")]
 		private static void SetValues(ShopManager __instance)
 		{
-			itemConsumablesAmount_ref(__instance) = 50;
+			itemConsumablesAmount_ref(__instance) = 100;
 			itemUpgradesAmount_ref(__instance) = 180;
 			itemHealthPacksAmount_ref(__instance) = 60;
 			itemSpawnTargetAmount_ref(__instance) = 450;
@@ -294,7 +306,7 @@ namespace MoreShopItems
 		[HarmonyPatch("GetAllItemsFromStatsManager")]
 		static void Postfix(ShopManager __instance)
 		{
-			__instance.itemConsumablesAmount = 50;
+			__instance.itemConsumablesAmount = 100;
 			Plugin.Logger.LogInfo($"Forced itemConsumablesAmount to {__instance.itemConsumablesAmount}");
 		}
 
@@ -561,7 +573,7 @@ namespace MoreShopItems
 		[HarmonyPatch("GetAllItemVolumesInScene")]
 		private static void LogPotentialItems(ShopManager __instance)
 		{
-			if (Plugin.Instance.boolConfigEntries["Log Potential Items"].Value)
+			if (Plugin.Instance.boolConfigEntries["Item Spawn Logs"].Value)
 			{
 				if (__instance == null) return;
 
@@ -631,7 +643,7 @@ namespace MoreShopItems
 					{
 						if (Plugin.CustomItemShelf == null)
 						{
-							Plugin.Logger.LogError("[MoreShopItems] CustomItemShelf is null. Cannot spawn shelf.");
+							Plugin.Logger.LogError("CustomItemShelf is null. Cannot spawn shelf.");
 							return null;
 						}
 
@@ -644,7 +656,7 @@ namespace MoreShopItems
 					{
 						if (Plugin.CustomItemShelf == null)
 						{
-							Plugin.Logger.LogError("[MoreShopItems] CustomItemShelf is null on host. Cannot spawn shelf.");
+							Plugin.Logger.LogError("CustomItemShelf is null on host. Cannot spawn shelf.");
 							return null;
 						}
 
