@@ -1,7 +1,8 @@
-﻿using System;
-using System.Linq;
-using BepInEx.Bootstrap;
+﻿using BepInEx.Bootstrap;
 using HarmonyLib;
+using System;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,7 +19,6 @@ namespace MoreShopItems
 			"Traktool.SharedUpgrades",
 			"Empress.SharedUpgradesCompat",
 			"Omniscye.SharedUpgradesHelper",
-			//"Dj_Haski.AdvanceMyShop",	// Not sure if it'll conflict, but likely - added for later if needed.
 		};
 
 		private bool incompatibilityDetected;
@@ -37,11 +37,20 @@ namespace MoreShopItems
 		private void Start()
 		{
 			incompatibilityDetected = IncompatibleGuids.Any(g => Chainloader.PluginInfos.ContainsKey(g));
+
 			if (!incompatibilityDetected)
 			{
 				Destroy(this);
 				return;
 			}
+
+			if (Chainloader.PluginInfos.ContainsKey("Empress.SkipToMainMenu"))
+			{
+				Plugin.Logger.LogInfo("Detected 'Empress.SkipToMainMenu'.");
+				incompatibilityDetected = true;
+				Plugin.Logger.LogInfo("Applying patch for 'Empress.SkipToMainMenu' to show Incompatibility Warning.");
+				PatchModAConflict();
+			}			
 
 			Plugin.Logger.LogInfo($"Incompatible plugin(s) detected: {string.Join(", ", IncompatibleGuids.Where(g => Chainloader.PluginInfos.ContainsKey(g)))}.");
 			_patcher = new Harmony("MoreShopItems.SplashBlock");
@@ -67,6 +76,36 @@ namespace MoreShopItems
 				Plugin.Logger.LogError("MoreShopItemsSplash Update error: " + ex);
 				Destroy(this);
 			}
+		}
+
+		private void PatchModAConflict()
+		{
+			try
+			{
+				Type modAType = AccessTools.TypeByName("Empress.SkipToMainMenu.SkipToMainMenu");
+				if (modAType == null) return;
+
+				MethodInfo targetMethod = AccessTools.Method(modAType, "Update");
+				if (targetMethod == null) return;
+
+				// Patch SkipToMainMenu Update method.
+				MethodInfo prefixMethod = SymbolExtensions.GetMethodInfo(() => BlockModAUpdate());
+
+				// New ID for this Patch
+				Harmony modAPatcher = new Harmony("MoreShopItems.ModAFix");
+				modAPatcher.Patch(targetMethod, prefix: new HarmonyMethod(prefixMethod));
+			}
+			catch (Exception ex)
+			{
+				Plugin.Logger.LogError($"Failed to patch SkipToMainMenu: {ex}");
+				Destroy(this);
+			}
+		}
+
+		// Runs BEFORE Empress.SkipToMainMenu's Update method. 
+		private static bool BlockModAUpdate()
+		{
+			return !MoreShopItemsSplash.BlockSplashSkip;
 		}
 
 		private void ShowOverlay()
@@ -303,6 +342,20 @@ namespace MoreShopItems
 			image.color = new Color(0.22f, 0.22f, 0.22f, 0.95f);
 
 			var btn = go.AddComponent<Button>();
+			btn.transition = Selectable.Transition.ColorTint;
+
+			// Button color
+			var cb = btn.colors;
+			cb.normalColor = new Color(0.22f, 0.22f, 0.22f, 0.95f);
+			cb.highlightedColor = new Color(0.12f, 0.12f, 0.12f, 0.95f);
+			cb.pressedColor = new Color(0.17f, 0.17f, 0.17f, 0.95f);
+			cb.selectedColor = cb.highlightedColor;
+			cb.disabledColor = new Color(0.12f, 0.12f, 0.12f, 0.5f);
+			cb.colorMultiplier = 1f;
+			cb.fadeDuration = 0.08f;
+			btn.colors = cb;
+
+			// Button size
 			var rt = go.GetComponent<RectTransform>();
 			rt.sizeDelta = new Vector2(200f, 56f);
 
